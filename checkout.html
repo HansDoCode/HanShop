@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout - Hans Shop</title>
+  <link rel="stylesheet" href="./output.css">
+</head>
+<body class="bg-gray-950 text-gray-100">
+  <header class="bg-gray-900 border-b border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 py-3">
+      <a href="/index.html" class="text-2xl font-bold text-gold">🏪 Hans Shop</a>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">Checkout</h1>
+
+    <div class="grid lg:grid-cols-3 gap-8">
+      <!-- Checkout Form -->
+      <form id="checkout-form" class="lg:col-span-2 space-y-6">
+        <!-- Customer Info -->
+        <section class="bg-gray-800 p-6 rounded-lg">
+          <h2 class="text-xl font-bold mb-4">Customer Information</h2>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-semibold mb-1">Full Name *</label>
+              <input type="text" id="customer-name" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:outline-none focus:border-gold">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold mb-1">Roblox Username *</label>
+              <input type="text" id="roblox-username" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:outline-none focus:border-gold">
+            </div>
+          </div>
+        </section>
+
+        <!-- Order Items -->
+        <section class="bg-gray-800 p-6 rounded-lg">
+          <h2 class="text-xl font-bold mb-4">Order Items</h2>
+          <div id="order-items" class="space-y-3"></div>
+        </section>
+
+        <!-- Special Requests -->
+        <section class="bg-gray-800 p-6 rounded-lg">
+          <h2 class="text-xl font-bold mb-4">Special Requests (Optional)</h2>
+          <textarea id="special-requests" placeholder="Any specific requests or notes?" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:outline-none focus:border-gold h-24"></textarea>
+        </section>
+
+        <!-- Payment Method -->
+        <section class="bg-gray-800 p-6 rounded-lg">
+          <h2 class="text-xl font-bold mb-4">Payment Method</h2>
+          <div class="space-y-4">
+            <!-- GCash QR -->
+            <label class="flex items-start gap-3 p-3 border border-gold rounded cursor-pointer">
+              <input type="radio" name="payment-method" value="gcash_qr" checked class="mt-1">
+              <div class="flex-1">
+                <p class="font-semibold">GCash QR Scan</p>
+                <p class="text-sm text-gray-400">Scan the QR code below</p>
+                <img id="gcash-qr" src="" alt="GCash QR" class="mt-2 w-40 h-40 bg-gray-700 p-2 rounded">
+                <p class="text-sm text-gray-400 mt-2">Account: <span id="gcash-account-name">Loading...</span></p>
+              </div>
+            </label>
+
+            <!-- GCash Manual -->
+            <label class="flex items-start gap-3 p-3 border border-gray-600 rounded cursor-pointer">
+              <input type="radio" name="payment-method" value="gcash_manual" class="mt-1">
+              <div class="flex-1">
+                <p class="font-semibold">GCash Manual Transfer</p>
+                <p class="text-sm text-gray-400">Enter reference number & upload proof</p>
+                <div class="mt-3 space-y-3" style="display:none;" id="gcash-manual-fields">
+                  <input type="text" id="gcash-ref" placeholder="Reference Number" class="w-full px-3 py-2 bg-gray-600 rounded border border-gray-500 text-sm">
+                  <input type="file" id="proof-image" accept="image/*" class="w-full text-sm">
+                </div>
+              </div>
+            </label>
+          </div>
+        </section>
+
+        <!-- T&C -->
+        <section class="bg-gray-800 p-6 rounded-lg">
+          <label class="flex items-start gap-3">
+            <input type="checkbox" id="terms-checkbox" required class="mt-1">
+            <span class="text-sm">
+              I agree to the <a href="#" class="text-gold hover:underline">Terms & Conditions</a>
+            </span>
+          </label>
+        </section>
+
+        <!-- Submit -->
+        <button type="submit" class="w-full btn-primary py-3 text-lg">Place Order</button>
+      </form>
+
+      <!-- Order Summary -->
+      <div class="bg-gray-800 p-6 rounded-lg h-fit sticky top-20">
+        <h2 class="text-xl font-bold mb-4">Order Summary</h2>
+        <div id="summary-items" class="space-y-2 mb-4 text-sm border-b border-gray-700 pb-4"></div>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span>Subtotal</span>
+            <span id="summary-subtotal">₱0.00</span>
+          </div>
+          <div class="flex justify-between" id="summary-discount-row" style="display:none;">
+            <span>Discount</span>
+            <span id="summary-discount" class="text-green-400">-₱0.00</span>
+          </div>
+          <div class="flex justify-between text-lg font-bold pt-2 border-t border-gray-600">
+            <span>Total</span>
+            <span id="summary-total">₱0.00</span>
+          </div>
+        </div>
+
+        <!-- Trust Badges -->
+        <div class="mt-6 pt-4 border-t border-gray-700 space-y-2 text-xs text-gray-400">
+          <p>🔒 Secure Order</p>
+          <p>⚡ Fast Delivery</p>
+          <p>✓ Verified Seller</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { cart } from "./js/cart.js";
+    import { Order } from "./js/order.js";
+    import { supabase } from "./js/supabase.js";
+    import { toast } from "./js/utils.js";
+
+    async function loadGCashSettings() {
+      try {
+        const { data: settings, error } = await supabase
+          .from("settings")
+          .select("key, value");
+
+        if (error) throw error;
+
+        const settingsMap = Object.fromEntries(settings.map(s => [s.key, s.value]));
+        
+        document.getElementById("gcash-qr").src = settingsMap.gcash_qr_url || "";
+        document.getElementById("gcash-account-name").textContent = settingsMap.gcash_account_name || "Hans Shop";
+      } catch (err) {
+        toast("Failed to load payment settings", "error");
+      }
+    }
+
+    function renderOrderSummary() {
+      const itemsContainer = document.getElementById("summary-items");
+      const orderItemsContainer = document.getElementById("order-items");
+
+      itemsContainer.innerHTML = cart.items.map(item => `
+        <div class="flex justify-between">
+          <span>${item.productName} x${item.qty}</span>
+          <span>₱${((item.price * item.qty) / 100).toFixed(2)}</span>
+        </div>
+      `).join("");
+
+      orderItemsContainer.innerHTML = cart.items.map((item, idx) => `
+        <div class="flex justify-between items-center">
+          <span>${item.productName}</span>
+          <input type="number" value="${item.qty}" min="1" onchange="updateItemQty(${idx}, this.value)" class="w-12 px-2 py-1 bg-gray-600 rounded text-sm">
+        </div>
+      `).join("");
+
+      updateTotals();
+    }
+
+    window.updateItemQty = (idx, qty) => {
+      cart.items[idx].qty = Math.max(1, parseInt(qty));
+      cart.save();
+      renderOrderSummary();
+    };
+
+    function updateTotals() {
+      const subtotal = cart.getTotal();
+      const discount = parseInt(sessionStorage.getItem("discount") || 0);
+      const total = Math.max(0, subtotal - discount);
+
+      document.getElementById("summary-subtotal").textContent = `₱${(subtotal / 100).toFixed(2)}`;
+      document.getElementById("summary-total").textContent = `₱${(total / 100).toFixed(2)}`;
+
+      if (discount > 0) {
+        document.getElementById("summary-discount-row").style.display = "flex";
+        document.getElementById("summary-discount").textContent = `-₱${(discount / 100).toFixed(2)}`;
+      }
+    }
+
+    // Payment method toggle
+    document.querySelectorAll('input[name="payment-method"]').forEach(radio => {
+      radio.addEventListener("change", (e) => {
+        const fields = document.getElementById("gcash-manual-fields");
+        fields.style.display = e.target.value === "gcash_manual" ? "block" : "none";
+      });
+    });
+
+    // Form submission
+    document.getElementById("checkout-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (!document.getElementById("terms-checkbox").checked) {
+        toast("Please accept terms & conditions", "error");
+        return;
+      }
+
+      if (cart.items.length === 0) {
+        toast("Your cart is empty", "error");
+        return;
+      }
+
+      const customerData = {
+        name: document.getElementById("customer-name").value,
+        robloxUsername: document.getElementById("roblox-username").value,
+        paymentMethod: document.querySelector('input[name="payment-method"]:checked').value,
+        gcashRef: document.getElementById("gcash-ref").value || null,
+        proofImageUrl: null // TODO: Handle file upload
+      };
+
+      try {
+        const orderId = await Order.submit(customerData);
+        window.location.href = `/confirmation.html?id=${orderId}`;
+      } catch (err) {
+        toast("Failed to place order: " + err.message, "error");
+      }
+    });
+
+    renderOrderSummary();
+    loadGCashSettings();
+  </script>
+</body>
+</html>

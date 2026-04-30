@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/input.css -o ./output.css",
+    "watch:css": "tailwindcss -i ./src/input.css -o ./output.css --watch"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.105.1",
+    "@tailwindcss/cli": "^4.2.4",
+    "tailwindcss": "^4.2.4",
+    "html2canvas": "^1.4.1"
+  }
+}

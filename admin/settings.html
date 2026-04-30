@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shop Settings - Hans Shop Admin</title>
+  <link rel="stylesheet" href="../output.css">
+</head>
+<body class="bg-gray-950 text-gray-100">
+  <header class="bg-gray-900 border-b border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <a href="/admin/dashboard.html" class="text-2xl font-bold text-gold">🏪 Admin</a>
+      <button id="logout-btn" class="px-3 py-1 text-sm border border-gray-600 rounded hover:border-gold">Logout</button>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">Shop Settings</h1>
+
+    <div class="space-y-6">
+      <!-- Shop Status -->
+      <section class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+        <h2 class="text-xl font-bold mb-4">Shop Status</h2>
+        <div class="space-y-3">
+          <label class="flex items-center gap-3">
+            <input type="checkbox" id="shop-open" class="w-4 h-4">
+            <span>Shop is Open</span>
+          </label>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Closed Message</label>
+            <textarea id="closed-message" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 h-20" placeholder="Message to show when shop is closed"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- GCash Settings -->
+      <section class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+        <h2 class="text-xl font-bold mb-4">GCash Payment Settings</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-semibold mb-1">QR Code Image URL</label>
+            <input type="url" id="gcash-qr-url" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold" placeholder="https://...">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Account Name</label>
+            <input type="text" id="gcash-account-name" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold" placeholder="e.g., Hans Shop">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Account Number</label>
+            <input type="text" id="gcash-account-number" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold" placeholder="e.g., 0912345678">
+          </div>
+        </div>
+      </section>
+
+      <!-- Contact Links -->
+      <section class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+        <h2 class="text-xl font-bold mb-4">Contact Links</h2>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-semibold mb-1">Facebook URL</label>
+            <input type="url" id="facebook-url" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold" placeholder="https://facebook.com/...">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Discord Invite</label>
+            <input type="url" id="discord-url" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold" placeholder="https://discord.gg/...">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Instagram URL</label>
+            <input type="url" id="instagram-url" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold" placeholder="https://instagram.com/...">
+          </div>
+        </div>
+      </section>
+
+      <!-- Order Limits -->
+      <section class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+        <h2 class="text-xl font-bold mb-4">Order Limits</h2>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-semibold mb-1">Min Order Amount (₱)</label>
+            <input type="number" id="min-order-amount" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold" value="200">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Max Orders Per Customer/Day</label>
+            <input type="number" id="max-orders-per-day" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold" value="5">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Max Qty Per Product/Order</label>
+            <input type="number" id="max-qty-per-product" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold" value="10">
+          </div>
+        </div>
+      </section>
+
+      <!-- Shop Info -->
+      <section class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+        <h2 class="text-xl font-bold mb-4">Shop Information</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-semibold mb-1">Seller Response Time Badge</label>
+            <input type="text" id="response-time-badge" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold" placeholder="e.g., Usually replies in 1 hr">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Terms & Conditions</label>
+            <textarea id="terms-text" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 h-32" placeholder="Your terms and conditions here..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Save Button -->
+      <button id="save-settings-btn" class="w-full btn-primary py-3">💾 Save All Settings</button>
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireAdmin } from "../js/admin.js";
+    import { supabase } from "../js/supabase.js";
+    import { logout, toast, getLocalStorage, setLocalStorage } from "../js/utils.js";
+
+    requireAdmin();
+    document.getElementById("logout-btn").addEventListener("click", logout);
+
+    async function loadSettings() {
+      try {
+        const { data: settings, error } = await supabase
+          .from("settings")
+          .select("key, value");
+
+        if (error) throw error;
+
+        const settingsMap = Object.fromEntries(settings.map(s => [s.key, s.value]));
+
+        // Populate form
+        document.getElementById("shop-open").checked = settingsMap.shop_open !== "false";
+        document.getElementById("closed-message").value = settingsMap.closed_message || "";
+        document.getElementById("gcash-qr-url").value = settingsMap.gcash_qr_url || "";
+        document.getElementById("gcash-account-name").value = settingsMap.gcash_account_name || "";
+        document.getElementById("gcash-account-number").value = settingsMap.gcash_account_number || "";
+        document.getElementById("facebook-url").value = settingsMap.facebook_url || "";
+        document.getElementById("discord-url").value = settingsMap.discord_url || "";
+        document.getElementById("instagram-url").value = settingsMap.instagram_url || "";
+        document.getElementById("min-order-amount").value = settingsMap.min_order_amount || "200";
+        document.getElementById("max-orders-per-day").value = settingsMap.max_orders_per_day || "5";
+        document.getElementById("max-qty-per-product").value = settingsMap.max_qty_per_product || "10";
+        document.getElementById("response-time-badge").value = settingsMap.response_time_badge || "Usually replies in 1 hr";
+        document.getElementById("terms-text").value = settingsMap.terms_text || "";
+      } catch (err) {
+        toast("Failed to load settings: " + err.message, "error");
+      }
+    }
+
+    document.getElementById("save-settings-btn").addEventListener("click", async () => {
+      const settingsData = [
+        { key: "shop_open", value: String(document.getElementById("shop-open").checked) },
+        { key: "closed_message", value: document.getElementById("closed-message").value },
+        { key: "gcash_qr_url", value: document.getElementById("gcash-qr-url").value },
+        { key: "gcash_account_name", value: document.getElementById("gcash-account-name").value },
+        { key: "gcash_account_number", value: document.getElementById("gcash-account-number").value },
+        { key: "facebook_url", value: document.getElementById("facebook-url").value },
+        { key: "discord_url", value: document.getElementById("discord-url").value },
+        { key: "instagram_url", value: document.getElementById("instagram-url").value },
+        { key: "min_order_amount", value: document.getElementById("min-order-amount").value },
+        { key: "max_orders_per_day", value: document.getElementById("max-orders-per-day").value },
+        { key: "max_qty_per_product", value: document.getElementById("max-qty-per-product").value },
+        { key: "response_time_badge", value: document.getElementById("response-time-badge").value },
+        { key: "terms_text", value: document.getElementById("terms-text").value }
+      ];
+
+      try {
+        for (const setting of settingsData) {
+          const { error } = await supabase
+            .from("settings")
+            .upsert({ key: setting.key, value: setting.value }, { onConflict: "key" });
+          if (error) throw error;
+        }
+        toast("✓ Settings saved!", "success");
+      } catch (err) {
+        toast("Failed to save settings: " + err.message, "error");
+      }
+    });
+
+    loadSettings();
+  </script>
+</body>
+</html>

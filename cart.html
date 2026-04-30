@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopping Cart - Hans Shop</title>
+  <link rel="stylesheet" href="./output.css">
+</head>
+<body class="bg-gray-950 text-gray-100">
+  <header class="sticky top-0 z-40 bg-gray-900 border-b border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/index.html" class="text-2xl font-bold text-gold">🏪 Hans Shop</a>
+      <a href="/index.html" class="text-gold hover:underline">Continue Shopping</a>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">Shopping Cart</h1>
+
+    <div class="grid lg:grid-cols-3 gap-8">
+      <!-- Cart Items -->
+      <div class="lg:col-span-2">
+        <div id="cart-items" class="space-y-4">
+          <p class="text-gray-400 text-center py-12">Your cart is empty</p>
+        </div>
+      </div>
+
+      <!-- Cart Summary -->
+      <div class="bg-gray-800 p-6 rounded-lg h-fit sticky top-20">
+        <h2 class="text-2xl font-bold mb-4">Order Summary</h2>
+        
+        <!-- Promo Code -->
+        <div class="mb-4">
+          <label class="block text-sm font-semibold mb-2">Promo Code</label>
+          <div class="flex gap-2">
+            <input type="text" id="promo-input" placeholder="Enter code" class="flex-1 px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:outline-none focus:border-gold text-sm">
+            <button id="promo-btn" class="px-3 py-2 btn-secondary text-sm">Apply</button>
+          </div>
+          <p id="promo-message" class="text-xs text-gray-500 mt-1"></p>
+        </div>
+
+        <!-- Totals -->
+        <div class="space-y-2 text-sm border-t border-gray-700 pt-4">
+          <div class="flex justify-between">
+            <span>Subtotal</span>
+            <span id="subtotal">₱0.00</span>
+          </div>
+          <div class="flex justify-between" id="discount-row" style="display:none;">
+            <span>Discount</span>
+            <span id="discount" class="text-green-400">-₱0.00</span>
+          </div>
+          <div class="flex justify-between text-lg font-bold border-t border-gray-600 pt-2 mt-2">
+            <span>Total</span>
+            <span id="total">₱0.00</span>
+          </div>
+        </div>
+
+        <!-- Min Order Warning -->
+        <p id="min-order-warning" class="text-xs text-red-400 mt-4 hidden">⚠️ Minimum order: ₱200</p>
+
+        <!-- Buttons -->
+        <button id="checkout-btn" class="w-full mt-6 btn-primary">Proceed to Checkout</button>
+        <button id="continue-shopping-btn" class="w-full mt-2 btn-ghost">Continue Shopping</button>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { cart, Cart } from "./js/cart.js";
+    import { supabase } from "./js/supabase.js";
+    import { initDarkMode, toast, setLocalStorage } from "./js/utils.js";
+
+    initDarkMode();
+
+    function renderCart() {
+      const itemsContainer = document.getElementById("cart-items");
+      
+      if (cart.items.length === 0) {
+        itemsContainer.innerHTML = '<p class="text-gray-400 text-center py-12">Your cart is empty</p>';
+        document.getElementById("checkout-btn").disabled = true;
+        return;
+      }
+
+      itemsContainer.innerHTML = cart.items.map((item, idx) => `
+        <div class="bg-gray-800 p-4 rounded-lg flex gap-4">
+          <div class="flex-1">
+            <h3 class="font-semibold">${item.productName}</h3>
+            <p class="text-gold text-lg font-bold">₱${(item.price / 100).toFixed(2)}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="updateQty(${idx}, ${item.qty - 1})" class="px-2 py-1 bg-gray-700 rounded">−</button>
+            <span class="w-8 text-center">${item.qty}</span>
+            <button onclick="updateQty(${idx}, ${item.qty + 1})" class="px-2 py-1 bg-gray-700 rounded">+</button>
+          </div>
+          <div class="text-right">
+            <p class="text-sm text-gray-400">Line Total</p>
+            <p class="font-bold">₱${((item.price * item.qty) / 100).toFixed(2)}</p>
+            <button onclick="removeItem(${idx})" class="text-xs text-red-400 hover:text-red-300 mt-1">Remove</button>
+          </div>
+        </div>
+      `).join("");
+
+      updateSummary();
+    }
+
+    window.updateQty = (idx, newQty) => {
+      if (newQty <= 0) {
+        removeItem(idx);
+      } else {
+        cart.items[idx].qty = newQty;
+        cart.save();
+        renderCart();
+      }
+    };
+
+    window.removeItem = (idx) => {
+      cart.items.splice(idx, 1);
+      cart.save();
+      renderCart();
+    };
+
+    function updateSummary() {
+      const subtotal = cart.getTotal();
+      const discount = parseInt(sessionStorage.getItem("discount") || 0);
+      const total = Math.max(0, subtotal - discount);
+
+      document.getElementById("subtotal").textContent = `₱${(subtotal / 100).toFixed(2)}`;
+      document.getElementById("total").textContent = `₱${(total / 100).toFixed(2)}`;
+
+      if (discount > 0) {
+        document.getElementById("discount-row").style.display = "flex";
+        document.getElementById("discount").textContent = `-₱${(discount / 100).toFixed(2)}`;
+      }
+
+      // Min order check
+      const minOrder = 20000; // ₱200
+      const warning = document.getElementById("min-order-warning");
+      if (total < minOrder) {
+        warning.classList.remove("hidden");
+        document.getElementById("checkout-btn").disabled = true;
+      } else {
+        warning.classList.add("hidden");
+        document.getElementById("checkout-btn").disabled = false;
+      }
+    }
+
+    document.getElementById("promo-btn").addEventListener("click", async () => {
+      const code = document.getElementById("promo-input").value.trim();
+      if (!code) return;
+
+      try {
+        const { data: promo, error } = await supabase
+          .from("promo_codes")
+          .select("*")
+          .eq("code", code)
+          .single();
+
+        if (error || !promo) {
+          document.getElementById("promo-message").textContent = "❌ Invalid code";
+          return;
+        }
+
+        if (new Date(promo.expiry_date) < new Date()) {
+          document.getElementById("promo-message").textContent = "❌ Code expired";
+          return;
+        }
+
+        const discount = promo.discount_type === "percentage" 
+          ? Math.floor(cart.getTotal() * promo.discount_value / 100)
+          : promo.discount_value * 100;
+
+        sessionStorage.setItem("discount", discount);
+        sessionStorage.setItem("promo_code", code);
+        document.getElementById("promo-message").textContent = `✓ Applied! Save ₱${(discount / 100).toFixed(2)}`;
+        updateSummary();
+      } catch (err) {
+        document.getElementById("promo-message").textContent = "❌ Error applying code";
+      }
+    });
+
+    document.getElementById("checkout-btn").addEventListener("click", () => {
+      window.location.href = "/checkout.html";
+    });
+
+    document.getElementById("continue-shopping-btn").addEventListener("click", () => {
+      window.location.href = "/index.html";
+    });
+
+    renderCart();
+  </script>
+</body>
+</html>

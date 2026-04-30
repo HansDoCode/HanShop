@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Tracker - Hans Shop</title>
+  <link rel="stylesheet" href="./output.css">
+</head>
+<body class="bg-gray-950 text-gray-100">
+  <header class="bg-gray-900 border-b border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 py-3">
+      <a href="/index.html" class="text-2xl font-bold text-gold">🏪 Hans Shop</a>
+    </div>
+  </header>
+
+  <main class="max-w-2xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-4">Order Tracker</h1>
+
+    <!-- Order Lookup -->
+    <div id="lookup-section" class="bg-gray-800 p-6 rounded-lg mb-6">
+      <div class="flex gap-2">
+        <input type="text" id="order-lookup" placeholder="Enter Order ID (e.g., HANS-2025-0001)" class="flex-1 px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:outline-none focus:border-gold">
+        <button id="lookup-btn" class="btn-primary">Search</button>
+      </div>
+    </div>
+
+    <!-- Order Details -->
+    <div id="order-details" style="display:none;" class="space-y-6">
+      <!-- Status Progress -->
+      <div class="bg-gray-800 p-6 rounded-lg">
+        <h2 class="text-xl font-bold mb-4">Status Progress</h2>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-gold text-black flex items-center justify-center font-bold">✓</div>
+            <div>
+              <p class="font-semibold">Order Submitted</p>
+              <p class="text-sm text-gray-400" id="status-submitted"></p>
+            </div>
+          </div>
+          <div class="h-6 w-0.5 bg-gray-600 mx-4"></div>
+          <div class="flex items-center gap-3">
+            <div id="status-verified-icon" class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-bold">⏳</div>
+            <div>
+              <p class="font-semibold" id="status-verified-text">Payment Verified</p>
+              <p class="text-sm text-gray-400" id="status-verified-time"></p>
+            </div>
+          </div>
+          <div class="h-6 w-0.5 bg-gray-600 mx-4"></div>
+          <div class="flex items-center gap-3">
+            <div id="status-processing-icon" class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-bold">⏳</div>
+            <div>
+              <p class="font-semibold">Processing</p>
+              <p class="text-sm text-gray-400" id="status-processing-time"></p>
+            </div>
+          </div>
+          <div class="h-6 w-0.5 bg-gray-600 mx-4"></div>
+          <div class="flex items-center gap-3">
+            <div id="status-fulfilled-icon" class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-bold">⏳</div>
+            <div>
+              <p class="font-semibold">Fulfilled</p>
+              <p class="text-sm text-gray-400" id="status-fulfilled-time"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Info -->
+      <div class="bg-gray-800 p-6 rounded-lg">
+        <h2 class="text-xl font-bold mb-4">Order Information</h2>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between border-b border-gray-700 pb-2">
+            <span class="text-gray-400">Order ID</span>
+            <span id="info-order-id" class="font-semibold"></span>
+          </div>
+          <div class="flex justify-between border-b border-gray-700 pb-2">
+            <span class="text-gray-400">Customer Name</span>
+            <span id="info-customer-name"></span>
+          </div>
+          <div class="flex justify-between border-b border-gray-700 pb-2">
+            <span class="text-gray-400">Roblox Username</span>
+            <span id="info-roblox-username"></span>
+          </div>
+          <div class="flex justify-between border-b border-gray-700 pb-2">
+            <span class="text-gray-400">Order Date</span>
+            <span id="info-date"></span>
+          </div>
+          <div class="flex justify-between border-b border-gray-700 pb-2">
+            <span class="text-gray-400">Total</span>
+            <span id="info-total" class="text-gold font-bold"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Items -->
+      <div class="bg-gray-800 p-6 rounded-lg">
+        <h2 class="text-xl font-bold mb-4">Items</h2>
+        <div id="order-items" class="space-y-2"></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-3">
+        <button id="reorder-btn" class="flex-1 btn-primary">🔄 Re-Order</button>
+        <button id="review-btn" class="flex-1 btn-secondary" style="display:none;">⭐ Leave Review</button>
+        <button id="download-receipt-btn" class="flex-1 btn-ghost">📥 Download Receipt</button>
+      </div>
+
+      <!-- Tier Info -->
+      <div id="tier-info" class="bg-gradient-to-r from-blue-900 to-purple-900 p-4 rounded-lg text-sm" style="display:none;"></div>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error-message" style="display:none;" class="bg-red-900 text-red-100 p-4 rounded text-center">
+      <p id="error-text"></p>
+    </div>
+  </main>
+
+  <script type="module">
+    import { Order } from "./js/order.js";
+    import { toast, formatCurrency, formatDate } from "./js/utils.js";
+
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get("id");
+
+    async function loadOrder(id) {
+      if (!id) return;
+
+      document.getElementById("lookup-section").style.display = "none";
+      document.getElementById("order-lookup").value = id;
+
+      const order = await Order.fetchById(id);
+      if (!order) {
+        showError("Order not found");
+        return;
+      }
+
+      displayOrder(order);
+    }
+
+    function displayOrder(order) {
+      document.getElementById("order-details").style.display = "block";
+      document.getElementById("error-message").style.display = "none";
+
+      // Info
+      document.getElementById("info-order-id").textContent = order.id;
+      document.getElementById("info-customer-name").textContent = order.customer_name;
+      document.getElementById("info-roblox-username").textContent = order.roblox_username;
+      document.getElementById("info-date").textContent = formatDate(order.created_at);
+      document.getElementById("info-total").textContent = formatCurrency(order.total);
+
+      // Items
+      const itemsHtml = order.order_items.map(oi => `
+        <div class="flex justify-between pb-2 border-b border-gray-700">
+          <span>${oi.products.name}</span>
+          <span class="text-gray-400">x${oi.qty}</span>
+        </div>
+      `).join("");
+      document.getElementById("order-items").innerHTML = itemsHtml;
+
+      // Status
+      const statusMap = {
+        pending: { icon: "⏳", color: "bg-yellow-600" },
+        payment_verified: { icon: "✓", color: "bg-blue-600" },
+        processing: { icon: "⚙️", color: "bg-blue-600" },
+        fulfilled: { icon: "✓", color: "bg-gold" },
+        rejected: { icon: "✗", color: "bg-red-600" }
+      };
+
+      const status = order.status;
+      document.getElementById("status-verified-icon").textContent = status === "rejected" ? "✗" : (["payment_verified", "processing", "fulfilled"].includes(status) ? "✓" : "⏳");
+      document.getElementById("status-processing-icon").textContent = status === "rejected" ? "✗" : (["processing", "fulfilled"].includes(status) ? "✓" : "⏳");
+      document.getElementById("status-fulfilled-icon").textContent = status === "fulfilled" ? "✓" : (status === "rejected" ? "✗" : "⏳");
+
+      if (status === "fulfilled") {
+        document.getElementById("review-btn").style.display = "block";
+        document.getElementById("review-btn").addEventListener("click", () => {
+          // TODO: Show review form
+          toast("Review form coming soon", "info");
+        });
+      }
+
+      if (status === "rejected") {
+        document.getElementById("status-verified-text").textContent = "Order Rejected";
+      }
+
+      // Tier
+      if (order.trusted_buyer_tier && order.trusted_buyer_tier !== "regular") {
+        document.getElementById("tier-info").innerHTML = `
+          <p>🏅 You are a <strong>${order.trusted_buyer_tier.toUpperCase()}</strong> trusted buyer!</p>
+        `;
+        document.getElementById("tier-info").style.display = "block";
+      }
+
+      // Re-order button
+      document.getElementById("reorder-btn").addEventListener("click", () => {
+        // TODO: Add items back to cart
+        toast("Re-order feature coming soon", "info");
+      });
+    }
+
+    function showError(message) {
+      document.getElementById("error-message").style.display = "block";
+      document.getElementById("error-text").textContent = message;
+      document.getElementById("order-details").style.display = "none";
+    }
+
+    document.getElementById("lookup-btn").addEventListener("click", async () => {
+      const id = document.getElementById("order-lookup").value.trim();
+      if (!id) {
+        toast("Please enter an Order ID", "error");
+        return;
+      }
+      const order = await Order.fetchById(id);
+      if (!order) {
+        showError("Order not found. Please check the Order ID and try again.");
+        return;
+      }
+      displayOrder(order);
+    });
+
+    if (orderId) {
+      loadOrder(orderId);
+    }
+  </script>
+</body>
+</html>

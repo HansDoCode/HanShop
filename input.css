@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-gold text-black rounded-lg font-semibold hover:bg-yellow-500 transition;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-cyan text-black rounded-lg font-semibold hover:bg-blue-300 transition;
+  }
+  
+  .btn-ghost {
+    @apply px-4 py-2 text-white border border-gray-600 rounded-lg hover:bg-gray-700 transition;
+  }
+  
+  .card {
+    @apply bg-gray-900 dark:bg-gray-800 rounded-lg p-4 shadow-lg;
+  }
+  
+  .badge-info {
+    @apply bg-blue-600 text-white px-2 py-1 rounded text-xs;
+  }
+  
+  .badge-warning {
+    @apply bg-red-600 text-white px-2 py-1 rounded text-xs;
+  }
+  
+  .badge-success {
+    @apply bg-green-600 text-white px-2 py-1 rounded text-xs;
+  }
+}

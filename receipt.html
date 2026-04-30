@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receipt - Hans Shop</title>
+  <link rel="stylesheet" href="./output.css">
+</head>
+<body class="bg-gray-950 text-gray-100">
+  <header class="bg-gray-900 border-b border-gray-700">
+    <div class="max-w-2xl mx-auto px-4 py-3 flex justify-between items-center">
+      <a href="/index.html" class="text-2xl font-bold text-gold">🏪 Hans Shop</a>
+      <button id="download-btn" class="btn-primary text-sm">📥 Download as PNG</button>
+    </div>
+  </header>
+
+  <main class="max-w-2xl mx-auto px-4 py-8">
+    <!-- Receipt Content -->
+    <div id="receipt-content" class="bg-white text-black p-8 rounded-lg shadow-lg">
+      <!-- Header -->
+      <div class="text-center border-b border-gray-300 pb-4 mb-6">
+        <h1 class="text-3xl font-bold text-gold">🏪 Hans Shop</h1>
+        <p class="text-sm text-gray-600">RECEIPT</p>
+      </div>
+
+      <!-- Order Info -->
+      <div class="grid grid-cols-2 gap-6 mb-6 text-sm">
+        <div>
+          <p class="text-gray-500">Order ID</p>
+          <p id="receipt-order-id" class="font-bold text-lg"></p>
+        </div>
+        <div class="text-right">
+          <p class="text-gray-500">Date</p>
+          <p id="receipt-date" class="font-bold"></p>
+        </div>
+      </div>
+
+      <!-- Customer Info -->
+      <div class="bg-gray-100 p-4 rounded mb-6 text-sm">
+        <p class="text-gray-600">Customer Information</p>
+        <p class="font-bold" id="receipt-customer-name"></p>
+        <p class="text-gray-700" id="receipt-roblox-username"></p>
+      </div>
+
+      <!-- Items -->
+      <table class="w-full mb-6 text-sm border-collapse">
+        <thead class="border-b-2 border-gray-300">
+          <tr>
+            <th class="text-left py-2">Item</th>
+            <th class="text-right py-2">Qty</th>
+            <th class="text-right py-2">Unit Price</th>
+            <th class="text-right py-2">Total</th>
+          </tr>
+        </thead>
+        <tbody id="receipt-items" class="border-b border-gray-300"></tbody>
+      </table>
+
+      <!-- Totals -->
+      <div class="space-y-2 text-sm mb-6 border-t-2 border-gray-300 pt-4">
+        <div class="flex justify-between">
+          <span>Subtotal</span>
+          <span id="receipt-subtotal"></span>
+        </div>
+        <div class="flex justify-between" id="receipt-discount-row" style="display:none;">
+          <span>Discount</span>
+          <span id="receipt-discount" class="text-green-700">-</span>
+        </div>
+        <div class="flex justify-between font-bold text-lg border-t border-gray-300 pt-2 mt-2">
+          <span>TOTAL</span>
+          <span id="receipt-total" class="text-gold"></span>
+        </div>
+      </div>
+
+      <!-- Payment Info -->
+      <div class="bg-gray-100 p-4 rounded mb-6 text-sm">
+        <p class="text-gray-600">Payment Method</p>
+        <p id="receipt-payment-method" class="font-bold"></p>
+      </div>
+
+      <!-- Status -->
+      <div class="text-sm text-center border-t border-gray-300 pt-4">
+        <p class="text-gray-600 mb-1">Status</p>
+        <p id="receipt-status" class="font-bold text-lg"></p>
+      </div>
+
+      <!-- Footer -->
+      <div class="text-center text-xs text-gray-600 mt-8 pt-4 border-t border-gray-300">
+        <p>Thank you for your order!</p>
+        <p>For inquiries, contact us via Facebook, Discord, or Instagram</p>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { Order } from "./js/order.js";
+    import { formatCurrency, formatDate, toast } from "./js/utils.js";
+
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get("id");
+
+    async function loadReceipt() {
+      if (!orderId) {
+        document.body.innerHTML = '<p class="text-center py-12">❌ Receipt not found</p>';
+        return;
+      }
+
+      const order = await Order.fetchById(orderId);
+      if (!order) {
+        document.body.innerHTML = '<p class="text-center py-12">❌ Receipt not found</p>';
+        return;
+      }
+
+      // Fill receipt
+      document.getElementById("receipt-order-id").textContent = orderId;
+      document.getElementById("receipt-date").textContent = formatDate(order.created_at);
+      document.getElementById("receipt-customer-name").textContent = order.customer_name;
+      document.getElementById("receipt-roblox-username").textContent = `Roblox: ${order.roblox_username}`;
+
+      // Items
+      const itemsHtml = order.order_items.map(oi => `
+        <tr class="border-b border-gray-200">
+          <td class="py-2">${oi.products.name}</td>
+          <td class="text-right">${oi.qty}</td>
+          <td class="text-right">${formatCurrency(oi.unit_price)}</td>
+          <td class="text-right">${formatCurrency(oi.line_total)}</td>
+        </tr>
+      `).join("");
+      document.getElementById("receipt-items").innerHTML = itemsHtml;
+
+      // Totals
+      const discount = order.discount || 0;
+      document.getElementById("receipt-subtotal").textContent = formatCurrency(order.subtotal);
+      document.getElementById("receipt-total").textContent = formatCurrency(order.total);
+
+      if (discount > 0) {
+        document.getElementById("receipt-discount-row").style.display = "flex";
+        document.getElementById("receipt-discount").textContent = `-${formatCurrency(discount)}`;
+      }
+
+      document.getElementById("receipt-payment-method").textContent = 
+        order.payment_method === "gcash_qr" ? "GCash QR Scan" : "GCash Manual Transfer";
+
+      document.getElementById("receipt-status").textContent = order.status.replace("_", " ").toUpperCase();
+
+      // Download button
+      document.getElementById("download-btn").addEventListener("click", () => {
+        // TODO: Implement html2canvas
+        toast("Download feature coming soon", "info");
+      });
+    }
+
+    loadReceipt();
+  </script>
+</body>
+</html>

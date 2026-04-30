@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Detail - Hans Shop</title>
+  <link rel="stylesheet" href="./output.css">
+</head>
+<body class="bg-gray-950 text-gray-100">
+  <header class="sticky top-0 z-40 bg-gray-900 border-b border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/index.html" class="text-2xl font-bold text-gold">🏪 Hans Shop</a>
+      <div class="flex items-center gap-4">
+        <button id="dark-mode-toggle" class="p-2 hover:bg-gray-800 rounded">🌙</button>
+        <a href="/cart.html" class="relative p-2 hover:bg-gray-800 rounded">
+          <span class="text-xl">🛒</span>
+          <span id="cart-count" class="hidden absolute -top-1 -right-1 bg-gold text-black text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <a href="/index.html" class="text-gold hover:underline mb-4 inline-block">← Back</a>
+
+    <div class="grid md:grid-cols-2 gap-8">
+      <!-- Product Image -->
+      <div class="flex items-center justify-center bg-gray-800 rounded-lg h-96">
+        <img id="product-image" src="" alt="Product" class="max-h-full max-w-full">
+      </div>
+
+      <!-- Product Details -->
+      <div>
+        <h1 id="product-name" class="text-3xl font-bold mb-2"></h1>
+        <div class="flex items-center gap-4 mb-4">
+          <span class="text-2xl text-gold font-bold" id="product-price"></span>
+          <span class="text-sm text-gray-400" id="stock-info"></span>
+        </div>
+
+        <p id="product-description" class="text-gray-300 mb-6"></p>
+
+        <!-- Quantity Selector -->
+        <div class="mb-6">
+          <label class="block text-sm font-semibold mb-2">Quantity</label>
+          <div class="flex items-center gap-3 mb-2">
+            <button id="qty-minus" class="px-3 py-2 bg-gray-800 rounded hover:bg-gray-700">−</button>
+            <input type="number" id="qty-input" value="1" min="1" class="w-12 text-center bg-gray-800 rounded border border-gray-600">
+            <button id="qty-plus" class="px-3 py-2 bg-gray-800 rounded hover:bg-gray-700">+</button>
+          </div>
+          <p class="text-xs text-gray-500" id="qty-limit"></p>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex gap-3 mb-6">
+          <button id="add-to-cart-btn" class="flex-1 btn-primary">Add to Cart</button>
+          <button id="buy-now-btn" class="flex-1 btn-secondary">Buy Now</button>
+        </div>
+
+        <button id="waitlist-btn" class="w-full px-4 py-2 border border-gold text-gold rounded hover:bg-gold/10 hidden">Join Waitlist</button>
+
+        <!-- Reviews Summary -->
+        <div class="bg-gray-800 p-4 rounded-lg mt-8">
+          <h3 class="font-bold mb-3">Customer Reviews</h3>
+          <div class="flex items-center gap-2 mb-4">
+            <span class="text-lg text-gold">⭐ 4.8</span>
+            <span class="text-gray-400">(12 reviews)</span>
+          </div>
+          <div id="reviews-list" class="space-y-4"></div>
+        </div>
+
+        <!-- Related Products -->
+        <div class="mt-8">
+          <h3 class="font-bold mb-3">Customers Also Bought</h3>
+          <div id="related-products" class="grid grid-cols-2 gap-3"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { cart } from "./js/cart.js";
+    import { supabase } from "./js/supabase.js";
+    import { initDarkMode, toast } from "./js/utils.js";
+
+    initDarkMode();
+
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get("id");
+
+    let product = null;
+
+    async function loadProduct() {
+      try {
+        const { data, error } = await supabase
+          .from("products")
+          .select("*")
+          .eq("id", productId)
+          .single();
+
+        if (error) throw error;
+        product = data;
+
+        document.getElementById("product-image").src = product.image_url;
+        document.getElementById("product-name").textContent = product.name;
+        document.getElementById("product-price").textContent = `₱${(product.rate / 100).toFixed(2)}`;
+        document.getElementById("product-description").textContent = product.description || "No description available";
+        document.getElementById("stock-info").textContent = product.stock > 0 ? `${product.stock} in stock` : "Out of stock";
+        document.getElementById("qty-limit").textContent = `Max ${product.max_qty_per_order || 10} per order`;
+
+        // Update cart count
+        const count = cart.getCount();
+        const cartCount = document.getElementById("cart-count");
+        if (cartCount) {
+          cartCount.textContent = count;
+          cartCount.style.display = count > 0 ? "flex" : "none";
+        }
+
+        if (product.stock === 0) {
+          document.getElementById("buy-now-btn").disabled = true;
+          document.getElementById("buy-now-btn").classList.add("opacity-50");
+          document.getElementById("add-to-cart-btn").disabled = true;
+          document.getElementById("add-to-cart-btn").classList.add("opacity-50");
+          document.getElementById("waitlist-btn").classList.remove("hidden");
+        }
+
+        // Load reviews
+        const { data: reviews, error: reviewsError } = await supabase
+          .from("reviews")
+          .select("*")
+          .eq("product_id", productId)
+          .order("created_at", { ascending: false });
+
+        if (!reviewsError && reviews?.length) {
+          document.getElementById("reviews-list").innerHTML = reviews.map(r => `
+            <div class="border-b border-gray-700 pb-3">
+              <div class="flex justify-between items-start mb-2">
+                <span class="font-semibold">${r.roblox_username}</span>
+                <span class="text-gold">${"⭐".repeat(r.stars)}</span>
+              </div>
+              <p class="text-sm text-gray-300">${r.text}</p>
+              <span class="text-xs text-gray-500">2 days ago</span>
+            </div>
+          `).join("");
+        }
+
+      } catch (err) {
+        document.getElementById("product-name").textContent = "✗ Failed to load product";
+      }
+    }
+
+    // Quantity controls
+    document.getElementById("qty-minus").addEventListener("click", () => {
+      const input = document.getElementById("qty-input");
+      input.value = Math.max(1, parseInt(input.value) - 1);
+    });
+
+    document.getElementById("qty-plus").addEventListener("click", () => {
+      const input = document.getElementById("qty-input");
+      const max = product?.max_qty_per_order || 10;
+      input.value = Math.min(max, parseInt(input.value) + 1);
+    });
+
+    document.getElementById("add-to-cart-btn").addEventListener("click", () => {
+      const qty = parseInt(document.getElementById("qty-input").value);
+      cart.add(product.id, product.name, product.rate, qty);
+      toast(`✓ Added ${qty} to cart!`, "success");
+    });
+
+    document.getElementById("buy-now-btn").addEventListener("click", () => {
+      const qty = parseInt(document.getElementById("qty-input").value);
+      cart.add(product.id, product.name, product.rate, qty);
+      window.location.href = "/checkout.html";
+    });
+
+    document.getElementById("waitlist-btn").addEventListener("click", async () => {
+      try {
+        const { error } = await supabase
+          .from("waitlist")
+          .insert([{ product_id: product.id, roblox_username: "Anonymous" }]);
+        if (error) throw error;
+        toast("✓ Joined waitlist!", "success");
+        document.getElementById("waitlist-btn").disabled = true;
+      } catch (err) {
+        toast("✗ Failed to join waitlist", "error");
+      }
+    });
+
+    loadProduct();
+  </script>
+</body>
+</html>

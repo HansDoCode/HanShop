@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller Panel Login - Hans Shop</title>
+  <link rel="stylesheet" href="../output.css">
+</head>
+<body class="bg-gray-950 text-gray-100 flex items-center justify-center min-h-screen">
+  <div class="w-full max-w-md px-4">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-gold mb-2">🏪 Hans Shop</h1>
+      <p class="text-gray-400">Seller Panel</p>
+    </div>
+
+    <div class="bg-gray-800 p-8 rounded-lg border border-gray-700">
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold mb-2">Username</label>
+          <input type="text" id="username" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:outline-none focus:border-gold">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold mb-2">Password</label>
+          <input type="password" id="password" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:outline-none focus:border-gold">
+        </div>
+
+        <div id="error-message" class="hidden text-red-400 text-sm bg-red-900/30 p-3 rounded"></div>
+
+        <button type="submit" class="w-full btn-primary py-2">Login</button>
+      </form>
+
+      <p class="text-xs text-gray-500 text-center mt-4">
+        Demo credentials:<br>
+        Username: <code>seller</code><br>
+        Password: <code>hans123</code>
+      </p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from "../js/supabase.js";
+    import { setLocalStorage, toast } from "../js/utils.js";
+
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+      const errorMsg = document.getElementById("error-message");
+
+      try {
+        // Simple password check (production would use Supabase Auth)
+        if (username === "seller" && password === "hans123") {
+          setLocalStorage("admin_session", {
+            username: username,
+            token: Math.random().toString(36),
+            createdAt: Date.now()
+          });
+          window.location.href = "/admin/dashboard.html";
+        } else {
+          errorMsg.textContent = "Invalid credentials";
+          errorMsg.classList.remove("hidden");
+        }
+      } catch (err) {
+        errorMsg.textContent = "Login failed: " + err.message;
+        errorMsg.classList.remove("hidden");
+      }
+    });
+  </script>
+</body>
+</html>

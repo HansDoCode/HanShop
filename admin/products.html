@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Management - Hans Shop Admin</title>
+  <link rel="stylesheet" href="../output.css">
+</head>
+<body class="bg-gray-950 text-gray-100">
+  <header class="bg-gray-900 border-b border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <a href="/admin/dashboard.html" class="text-2xl font-bold text-gold">🏪 Admin</a>
+      <button id="logout-btn" class="px-3 py-1 text-sm border border-gray-600 rounded hover:border-gold">Logout</button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold">Product Management</h1>
+      <button id="add-product-btn" class="btn-primary">+ Add Product</button>
+    </div>
+
+    <!-- Products Table -->
+    <div class="bg-gray-800 rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-700 border-b border-gray-600">
+            <tr>
+              <th class="text-left py-3 px-4 font-semibold">Product</th>
+              <th class="text-left py-3 px-4 font-semibold">Price</th>
+              <th class="text-left py-3 px-4 font-semibold">Stock</th>
+              <th class="text-left py-3 px-4 font-semibold">Featured</th>
+              <th class="text-left py-3 px-4 font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="products-tbody" class="divide-y divide-gray-700">
+            <tr>
+              <td colspan="5" class="text-center py-8 text-gray-500">Loading products...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Product Modal -->
+  <div id="product-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-900 rounded-lg p-6 max-w-2xl w-full border border-gray-700 max-h-96 overflow-y-auto">
+      <h2 class="text-xl font-bold mb-4">Add / Edit Product</h2>
+      
+      <form id="product-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold mb-1">Product Name *</label>
+          <input type="text" id="product-name" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold">
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold mb-1">Description</label>
+          <textarea id="product-description" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold h-24"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold mb-1">Image URL *</label>
+            <input type="url" id="product-image-url" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold">
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold mb-1">Price (₱) *</label>
+            <input type="number" id="product-price" required step="0.01" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold mb-1">Stock *</label>
+            <input type="number" id="product-stock" required min="0" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold">
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold mb-1">Max Qty Per Order</label>
+            <input type="number" id="product-max-qty" value="10" min="1" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold">
+          </div>
+        </div>
+
+        <label class="flex items-center gap-2">
+          <input type="checkbox" id="product-featured" class="w-4 h-4">
+          <span class="text-sm">Featured Product</span>
+        </label>
+
+        <div class="flex gap-2 pt-4">
+          <button type="submit" class="flex-1 btn-primary">Save Product</button>
+          <button type="button" onclick="closeProductModal()" class="flex-1 btn-ghost">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAdmin } from "../js/admin.js";
+    import { supabase } from "../js/supabase.js";
+    import { logout, toast, formatCurrency } from "../js/utils.js";
+
+    requireAdmin();
+    document.getElementById("logout-btn").addEventListener("click", logout);
+
+    let products = [];
+    let currentEditingProductId = null;
+
+    async function loadProducts() {
+      try {
+        const { data, error } = await supabase
+          .from("products")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        products = data;
+        renderProducts();
+      } catch (err) {
+        toast("Failed to load products: " + err.message, "error");
+      }
+    }
+
+    function renderProducts() {
+      const tbody = document.getElementById("products-tbody");
+      tbody.innerHTML = products.map(p => `
+        <tr class="border-b border-gray-700 hover:bg-gray-700/50">
+          <td class="py-3 px-4">
+            <div class="flex items-center gap-3">
+              <img src="${p.image_url}" alt="${p.name}" class="w-10 h-10 rounded object-cover">
+              <span>${p.name}</span>
+            </div>
+          </td>
+          <td class="py-3 px-4 font-bold text-gold">₱${(p.rate / 100).toFixed(2)}</td>
+          <td class="py-3 px-4">${p.stock}</td>
+          <td class="py-3 px-4">
+            <input type="checkbox" ${p.featured ? "checked" : ""} onchange="toggleFeatured('${p.id}', this.checked)" class="w-4 h-4">
+          </td>
+          <td class="py-3 px-4 space-x-2">
+            <button onclick="editProduct('${p.id}')" class="text-blue-400 hover:underline text-sm">Edit</button>
+            <button onclick="deleteProduct('${p.id}')" class="text-red-400 hover:underline text-sm">Delete</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    window.editProduct = (id) => {
+      const product = products.find(p => p.id === id);
+      if (!product) return;
+
+      currentEditingProductId = id;
+      document.getElementById("product-name").value = product.name;
+      document.getElementById("product-description").value = product.description || "";
+      document.getElementById("product-image-url").value = product.image_url;
+      document.getElementById("product-price").value = (product.rate / 100).toFixed(2);
+      document.getElementById("product-stock").value = product.stock;
+      document.getElementById("product-max-qty").value = product.max_qty_per_order || 10;
+      document.getElementById("product-featured").checked = product.featured;
+
+      document.getElementById("product-modal").classList.remove("hidden");
+    };
+
+    window.deleteProduct = async (id) => {
+      if (!confirm("Delete this product?")) return;
+
+      try {
+        const { error } = await supabase.from("products").delete().eq("id", id);
+        if (error) throw error;
+        toast("✓ Product deleted", "success");
+        loadProducts();
+      } catch (err) {
+        toast("Failed to delete product: " + err.message, "error");
+      }
+    };
+
+    window.toggleFeatured = async (id, featured) => {
+      try {
+        const { error } = await supabase
+          .from("products")
+          .update({ featured })
+          .eq("id", id);
+        if (error) throw error;
+        loadProducts();
+      } catch (err) {
+        toast("Failed to update product: " + err.message, "error");
+      }
+    };
+
+    window.closeProductModal = () => {
+      document.getElementById("product-modal").classList.add("hidden");
+      currentEditingProductId = null;
+      document.getElementById("product-form").reset();
+    };
+
+    document.getElementById("add-product-btn").addEventListener("click", () => {
+      currentEditingProductId = null;
+      document.getElementById("product-form").reset();
+      document.getElementById("product-modal").classList.remove("hidden");
+    });
+
+    document.getElementById("product-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const productData = {
+        name: document.getElementById("product-name").value,
+        description: document.getElementById("product-description").value,
+        image_url: document.getElementById("product-image-url").value,
+        rate: Math.floor(parseFloat(document.getElementById("product-price").value) * 100),
+        stock: parseInt(document.getElementById("product-stock").value),
+        max_qty_per_order: parseInt(document.getElementById("product-max-qty").value),
+        featured: document.getElementById("product-featured").checked,
+        created_at: new Date().toISOString()
+      };
+
+      try {
+        if (currentEditingProductId) {
+          // Update
+          const { error } = await supabase
+            .from("products")
+            .update(productData)
+            .eq("id", currentEditingProductId);
+          if (error) throw error;
+          toast("✓ Product updated", "success");
+        } else {
+          // Create
+          const { error } = await supabase.from("products").insert([productData]);
+          if (error) throw error;
+          toast("✓ Product added", "success");
+        }
+        window.closeProductModal();
+        loadProducts();
+      } catch (err) {
+        toast("Failed to save product: " + err.message, "error");
+      }
+    });
+
+    loadProducts();
+  </script>
+</body>
+</html>

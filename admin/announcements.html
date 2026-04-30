@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Announcements - Hans Shop Admin</title>
+  <link rel="stylesheet" href="../output.css">
+</head>
+<body class="bg-gray-950 text-gray-100">
+  <header class="bg-gray-900 border-b border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <a href="/admin/dashboard.html" class="text-2xl font-bold text-gold">🏪 Admin</a>
+      <button id="logout-btn" class="px-3 py-1 text-sm border border-gray-600 rounded hover:border-gold">Logout</button>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold">Announcements</h1>
+      <button id="add-announcement-btn" class="btn-primary">+ Add Announcement</button>
+    </div>
+
+    <!-- Announcements List -->
+    <div id="announcements-list" class="space-y-4"></div>
+  </main>
+
+  <!-- Announcement Modal -->
+  <div id="announcement-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-900 rounded-lg p-6 max-w-2xl w-full border border-gray-700">
+      <h2 class="text-xl font-bold mb-4">Add / Edit Announcement</h2>
+      
+      <form id="announcement-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold mb-1">Text *</label>
+          <textarea id="announcement-text" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold h-20"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold mb-1">Type *</label>
+          <select id="announcement-type" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold">
+            <option value="info">Info (Blue)</option>
+            <option value="promo">Promo (Amber)</option>
+            <option value="warning">Warning (Red)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold mb-1">Start Date *</label>
+            <input type="datetime-local" id="announcement-start" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold">
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold mb-1">Expiry Date *</label>
+            <input type="datetime-local" id="announcement-expiry" required class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold">
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="announcement-dismissible" class="w-4 h-4">
+            <span class="text-sm">Allow customers to dismiss</span>
+          </label>
+
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="announcement-force-show" class="w-4 h-4">
+            <span class="text-sm">Force show now (override schedule)</span>
+          </label>
+        </div>
+
+        <div class="flex gap-2 pt-4">
+          <button type="submit" class="flex-1 btn-primary">Save Announcement</button>
+          <button type="button" onclick="closeAnnouncementModal()" class="flex-1 btn-ghost">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAdmin } from "../js/admin.js";
+    import { supabase } from "../js/supabase.js";
+    import { logout, toast, formatDate } from "../js/utils.js";
+
+    requireAdmin();
+    document.getElementById("logout-btn").addEventListener("click", logout);
+
+    let announcements = [];
+    let currentEditingId = null;
+
+    async function loadAnnouncements() {
+      try {
+        const { data, error } = await supabase
+          .from("announcements")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        announcements = data;
+        renderAnnouncements();
+      } catch (err) {
+        toast("Failed to load announcements: " + err.message, "error");
+      }
+    }
+
+    function renderAnnouncements() {
+      const list = document.getElementById("announcements-list");
+      
+      if (announcements.length === 0) {
+        list.innerHTML = '<p class="text-center text-gray-500 py-8">No announcements yet</p>';
+        return;
+      }
+
+      list.innerHTML = announcements.map(a => `
+        <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+          <div class="flex items-start justify-between mb-2">
+            <span class="text-xs px-2 py-1 rounded ${
+              a.type === "info" ? "bg-blue-900 text-blue-300" :
+              a.type === "promo" ? "bg-amber-900 text-amber-300" :
+              "bg-red-900 text-red-300"
+            }">
+              ${a.type.toUpperCase()}
+            </span>
+            <div class="flex gap-2">
+              <button onclick="editAnnouncement('${a.id}')" class="text-blue-400 hover:underline text-sm">Edit</button>
+              <button onclick="deleteAnnouncement('${a.id}')" class="text-red-400 hover:underline text-sm">Delete</button>
+            </div>
+          </div>
+          <p class="mb-2">${a.text}</p>
+          <p class="text-xs text-gray-400">
+            ${formatDate(a.start_date)} → ${formatDate(a.expiry_date)}
+            ${a.force_show ? " • <strong>Force Show</strong>" : ""}
+          </p>
+        </div>
+      `).join("");
+    }
+
+    window.editAnnouncement = (id) => {
+      const announcement = announcements.find(a => a.id === id);
+      if (!announcement) return;
+
+      currentEditingId = id;
+      document.getElementById("announcement-text").value = announcement.text;
+      document.getElementById("announcement-type").value = announcement.type;
+      document.getElementById("announcement-start").value = announcement.start_date.slice(0, 16);
+      document.getElementById("announcement-expiry").value = announcement.expiry_date.slice(0, 16);
+      document.getElementById("announcement-dismissible").checked = announcement.dismissible;
+      document.getElementById("announcement-force-show").checked = announcement.force_show;
+
+      document.getElementById("announcement-modal").classList.remove("hidden");
+    };
+
+    window.deleteAnnouncement = async (id) => {
+      if (!confirm("Delete this announcement?")) return;
+
+      try {
+        const { error } = await supabase.from("announcements").delete().eq("id", id);
+        if (error) throw error;
+        toast("✓ Announcement deleted", "success");
+        loadAnnouncements();
+      } catch (err) {
+        toast("Failed to delete announcement: " + err.message, "error");
+      }
+    };
+
+    window.closeAnnouncementModal = () => {
+      document.getElementById("announcement-modal").classList.add("hidden");
+      currentEditingId = null;
+      document.getElementById("announcement-form").reset();
+    };
+
+    document.getElementById("add-announcement-btn").addEventListener("click", () => {
+      currentEditingId = null;
+      document.getElementById("announcement-form").reset();
+      document.getElementById("announcement-modal").classList.remove("hidden");
+    });
+
+    document.getElementById("announcement-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const data = {
+        text: document.getElementById("announcement-text").value,
+        type: document.getElementById("announcement-type").value,
+        start_date: new Date(document.getElementById("announcement-start").value).toISOString(),
+        expiry_date: new Date(document.getElementById("announcement-expiry").value).toISOString(),
+        dismissible: document.getElementById("announcement-dismissible").checked,
+        force_show: document.getElementById("announcement-force-show").checked,
+        created_at: new Date().toISOString()
+      };
+
+      try {
+        if (currentEditingId) {
+          const { error } = await supabase
+            .from("announcements")
+            .update(data)
+            .eq("id", currentEditingId);
+          if (error) throw error;
+          toast("✓ Announcement updated", "success");
+        } else {
+          const { error } = await supabase.from("announcements").insert([data]);
+          if (error) throw error;
+          toast("✓ Announcement created", "success");
+        }
+        window.closeAnnouncementModal();
+        loadAnnouncements();
+      } catch (err) {
+        toast("Failed to save announcement: " + err.message, "error");
+      }
+    });
+
+    loadAnnouncements();
+  </script>
+</body>
+</html>

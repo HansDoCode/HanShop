@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Management - Hans Shop Admin</title>
+  <link rel="stylesheet" href="../output.css">
+</head>
+<body class="bg-gray-950 text-gray-100">
+  <header class="bg-gray-900 border-b border-gray-700">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <a href="/admin/dashboard.html" class="text-2xl font-bold text-gold">🏪 Admin</a>
+      <button id="logout-btn" class="px-3 py-1 text-sm border border-gray-600 rounded hover:border-gold">Logout</button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">Order Management</h1>
+
+    <!-- Filters -->
+    <div class="bg-gray-800 p-4 rounded-lg mb-6 flex gap-4 flex-wrap">
+      <select id="status-filter" class="px-3 py-2 bg-gray-700 rounded border border-gray-600">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="payment_verified">Payment Verified</option>
+        <option value="processing">Processing</option>
+        <option value="fulfilled">Fulfilled</option>
+        <option value="rejected">Rejected</option>
+      </select>
+      
+      <input type="text" id="search-input" placeholder="Search by Order ID or username" class="flex-1 px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-gold">
+      
+      <button id="apply-filters-btn" class="px-4 py-2 btn-primary">Apply Filters</button>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="bg-gray-800 rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-700 border-b border-gray-600">
+            <tr>
+              <th class="text-left py-3 px-4 font-semibold">Order ID</th>
+              <th class="text-left py-3 px-4 font-semibold">Customer</th>
+              <th class="text-left py-3 px-4 font-semibold">Roblox</th>
+              <th class="text-left py-3 px-4 font-semibold">Items</th>
+              <th class="text-right py-3 px-4 font-semibold">Total</th>
+              <th class="text-left py-3 px-4 font-semibold">Payment</th>
+              <th class="text-left py-3 px-4 font-semibold">Status</th>
+              <th class="text-left py-3 px-4 font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="orders-tbody" class="divide-y divide-gray-700">
+            <tr>
+              <td colspan="8" class="text-center py-8 text-gray-500">Loading orders...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div id="order-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-900 rounded-lg p-6 max-w-md w-full border border-gray-700">
+      <h2 class="text-xl font-bold mb-4" id="modal-title">Order Details</h2>
+      <div id="modal-content" class="space-y-3 mb-6"></div>
+      
+      <div class="flex gap-2">
+        <button id="modal-approve-btn" class="flex-1 btn-primary text-sm">✓ Approve</button>
+        <button id="modal-reject-btn" class="flex-1 btn-ghost text-sm">✗ Reject</button>
+        <button id="modal-fulfill-btn" class="flex-1 btn-secondary text-sm" style="display:none;">✓ Fulfill</button>
+        <button id="modal-close-btn" class="flex-1 btn-ghost text-sm">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAdmin } from "../js/admin.js";
+    import { supabase } from "../js/supabase.js";
+    import { logout, toast, formatCurrency } from "../js/utils.js";
+
+    requireAdmin();
+    document.getElementById("logout-btn").addEventListener("click", logout);
+
+    let allOrders = [];
+
+    async function loadOrders() {
+      try {
+        const { data: orders, error } = await supabase
+          .from("orders")
+          .select(`
+            *,
+            order_items ( products ( name ) )
+          `)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        allOrders = orders;
+        renderOrders(allOrders);
+      } catch (err) {
+        toast("Failed to load orders: " + err.message, "error");
+      }
+    }
+
+    function renderOrders(orders) {
+      const tbody = document.getElementById("orders-tbody");
+      tbody.innerHTML = orders.map(o => `
+        <tr class="border-b border-gray-700 hover:bg-gray-700/50">
+          <td class="py-3 px-4 font-mono text-gold cursor-pointer hover:underline" onclick="openOrderModal('${o.id}')">${o.id}</td>
+          <td class="py-3 px-4">${o.customer_name}</td>
+          <td class="py-3 px-4 text-sm text-gray-400">${o.roblox_username}</td>
+          <td class="py-3 px-4 text-sm">${o.order_items.length} item(s)</td>
+          <td class="py-3 px-4 font-bold text-right">${formatCurrency(o.total)}</td>
+          <td class="py-3 px-4 text-xs">
+            <span class="bg-blue-900 text-blue-200 px-2 py-1 rounded">
+              ${o.payment_method === "gcash_qr" ? "QR" : "Manual"}
+            </span>
+          </td>
+          <td class="py-3 px-4">
+            <span class="text-xs px-2 py-1 rounded ${
+              o.status === "fulfilled" ? "bg-green-900 text-green-300" :
+              o.status === "pending" ? "bg-yellow-900 text-yellow-300" :
+              o.status === "rejected" ? "bg-red-900 text-red-300" :
+              "bg-blue-900 text-blue-300"
+            }">
+              ${o.status}
+            </span>
+          </td>
+          <td class="py-3 px-4">
+            <button onclick="openOrderModal('${o.id}')" class="text-gold hover:underline text-sm">View</button>
+          </td>
+        </tr>
+      `).join("");
+
+      if (orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-500">No orders found</td></tr>';
+      }
+    }
+
+    window.openOrderModal = async (orderId) => {
+      const order = allOrders.find(o => o.id === orderId);
+      if (!order) return;
+
+      const modal = document.getElementById("order-modal");
+      const modalContent = document.getElementById("modal-content");
+      
+      modalContent.innerHTML = `
+        <div>
+          <p class="text-gray-400 text-sm">Order ID</p>
+          <p class="font-bold">${order.id}</p>
+        </div>
+        <div>
+          <p class="text-gray-400 text-sm">Customer</p>
+          <p class="font-bold">${order.customer_name}</p>
+          <p class="text-sm text-gray-400">Roblox: ${order.roblox_username}</p>
+        </div>
+        <div>
+          <p class="text-gray-400 text-sm">Items</p>
+          <ul class="text-sm">
+            ${order.order_items.map(oi => `<li>• ${oi.products.name} x${oi.qty}</li>`).join("")}
+          </ul>
+        </div>
+        <div>
+          <p class="text-gray-400 text-sm">Total</p>
+          <p class="font-bold text-lg text-gold">${formatCurrency(order.total)}</p>
+        </div>
+        <div>
+          <p class="text-gray-400 text-sm">Status</p>
+          <p class="font-bold">${order.status}</p>
+        </div>
+      `;
+
+      // Show/hide buttons based on status
+      const approveBtn = document.getElementById("modal-approve-btn");
+      const rejectBtn = document.getElementById("modal-reject-btn");
+      const fulfillBtn = document.getElementById("modal-fulfill-btn");
+
+      approveBtn.style.display = order.status === "pending" ? "block" : "none";
+      rejectBtn.style.display = order.status === "pending" ? "block" : "none";
+      fulfillBtn.style.display = order.status === "payment_verified" ? "block" : "none";
+
+      approveBtn.onclick = () => updateOrderStatus(order.id, "payment_verified");
+      rejectBtn.onclick = () => {
+        const reason = prompt("Enter rejection reason:");
+        if (reason) updateOrderStatus(order.id, "rejected", reason);
+      };
+      fulfillBtn.onclick = () => updateOrderStatus(order.id, "fulfilled");
+
+      modal.classList.remove("hidden");
+    };
+
+    async function updateOrderStatus(orderId, status, reason = null) {
+      try {
+        const { error } = await supabase
+          .from("orders")
+          .update({ 
+            status: status,
+            rejection_reason: reason,
+            fulfilled_at: status === "fulfilled" ? new Date().toISOString() : null
+          })
+          .eq("id", orderId);
+
+        if (error) throw error;
+        toast(`✓ Order ${status}`, "success");
+        document.getElementById("order-modal").classList.add("hidden");
+        loadOrders();
+      } catch (err) {
+        toast("Failed to update order: " + err.message, "error");
+      }
+    }
+
+    document.getElementById("modal-close-btn").addEventListener("click", () => {
+      document.getElementById("order-modal").classList.add("hidden");
+    });
+
+    document.getElementById("apply-filters-btn").addEventListener("click", () => {
+      const status = document.getElementById("status-filter").value;
+      const search = document.getElementById("search-input").value.toLowerCase();
+
+      let filtered = allOrders;
+      if (status) filtered = filtered.filter(o => o.status === status);
+      if (search) filtered = filtered.filter(o => o.id.toLowerCase().includes(search) || o.roblox_username.toLowerCase().includes(search));
+
+      renderOrders(filtered);
+    });
+
+    loadOrders();
+  </script>
+</body>
+</html>

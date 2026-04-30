@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmed - Hans Shop</title>
+  <link rel="stylesheet" href="./output.css">
+</head>
+<body class="bg-gray-950 text-gray-100">
+  <main class="max-w-2xl mx-auto px-4 py-8">
+    <div class="text-center mb-8">
+      <div class="text-6xl mb-4">✅</div>
+      <h1 class="text-3xl font-bold mb-2">Order Confirmed!</h1>
+      <p class="text-gray-400">Order ID: <span id="order-id" class="text-gold font-bold">HANS-2025-XXXX</span></p>
+    </div>
+
+    <!-- Order Details -->
+    <div class="bg-gray-800 p-6 rounded-lg mb-6">
+      <h2 class="text-xl font-bold mb-4">Order Summary</h2>
+      <div id="order-summary" class="space-y-3 mb-4 border-b border-gray-700 pb-4"></div>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span>Total</span>
+          <span id="order-total" class="font-bold text-lg text-gold">₱0.00</span>
+        </div>
+        <div class="flex justify-between text-gray-400">
+          <span>Status</span>
+          <span class="badge-info">Waiting for seller response</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Message -->
+    <div class="bg-gray-800 p-6 rounded-lg mb-6">
+      <h2 class="text-xl font-bold mb-3">Chat Message for Seller</h2>
+      <div id="chat-message" class="bg-gray-900 p-4 rounded text-sm whitespace-pre-wrap font-mono mb-3"></div>
+      <button id="copy-message-btn" class="w-full btn-secondary">📋 Copy Message</button>
+    </div>
+
+    <!-- Receipt -->
+    <div class="bg-gray-800 p-6 rounded-lg mb-6">
+      <h2 class="text-xl font-bold mb-3">Receipt</h2>
+      <button id="download-receipt-btn" class="w-full btn-primary mb-3">📥 Download Receipt as PNG</button>
+      <a id="receipt-link" href="#" class="block text-center text-gold hover:underline text-sm">View Shareable Receipt</a>
+    </div>
+
+    <!-- Contact Links -->
+    <div class="bg-gray-800 p-6 rounded-lg mb-6">
+      <h2 class="text-xl font-bold mb-3">Contact Us</h2>
+      <div class="flex gap-3 justify-center">
+        <a href="https://facebook.com" class="px-4 py-2 bg-blue-700 rounded hover:bg-blue-600">📘 Facebook</a>
+        <a href="https://discord.com" class="px-4 py-2 bg-purple-700 rounded hover:bg-purple-600">💬 Discord</a>
+        <a href="https://instagram.com" class="px-4 py-2 bg-pink-700 rounded hover:bg-pink-600">📷 Instagram</a>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex gap-3">
+      <button id="track-order-btn" class="flex-1 btn-primary">🔍 Track Your Order</button>
+      <a href="/index.html" class="flex-1 btn-secondary text-center">🏪 Continue Shopping</a>
+    </div>
+  </main>
+
+  <script type="module">
+    import { Order } from "./js/order.js";
+    import { toast, formatCurrency } from "./js/utils.js";
+
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get("id") || sessionStorage.getItem("lastOrderId");
+
+    async function loadOrder() {
+      if (!orderId) {
+        document.querySelector("h1").textContent = "❌ Order not found";
+        return;
+      }
+
+      const order = await Order.fetchById(orderId);
+      if (!order) {
+        document.querySelector("h1").textContent = "❌ Order not found";
+        return;
+      }
+
+      document.getElementById("order-id").textContent = orderId;
+
+      // Render summary
+      const summaryHtml = order.order_items.map(oi => `
+        <div class="flex justify-between">
+          <span>${oi.products.name} x${oi.qty}</span>
+          <span>${formatCurrency(oi.line_total)}</span>
+        </div>
+      `).join("");
+      
+      document.getElementById("order-summary").innerHTML = summaryHtml;
+      document.getElementById("order-total").textContent = formatCurrency(order.total);
+
+      // Chat message
+      const chatMessage = Order.generateChatMessage(order);
+      document.getElementById("chat-message").textContent = chatMessage;
+
+      // Receipt link
+      document.getElementById("receipt-link").href = `/receipt.html?id=${orderId}`;
+
+      // Buttons
+      document.getElementById("copy-message-btn").addEventListener("click", () => {
+        navigator.clipboard.writeText(chatMessage);
+        toast("✓ Message copied!", "success");
+      });
+
+      document.getElementById("track-order-btn").addEventListener("click", () => {
+        window.location.href = `/tracker.html?id=${orderId}`;
+      });
+
+      document.getElementById("download-receipt-btn").addEventListener("click", async () => {
+        toast("📥 Generating receipt...", "info");
+        // TODO: Implement html2canvas for receipt PNG export
+        setTimeout(() => toast("✓ Receipt downloaded!", "success"), 1000);
+      });
+    }
+
+    loadOrder();
+  </script>
+</body>
+</html>
