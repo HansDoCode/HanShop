@@ -19,7 +19,7 @@ export class Order {
           total: total,
           subtotal: total,
           discount: 0,
-          payment_method: "gcash_manual",
+          payment_method: customerData.paymentMethod,
           gcash_ref: customerData.gcashRef || null,
           proof_image_url: customerData.proofImageUrl || null,
           status: "pending",

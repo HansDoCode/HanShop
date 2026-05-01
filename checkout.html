@@ -192,6 +192,32 @@
       });
     });
 
+    // File upload handler
+    async function uploadProofImage(file) {
+      if (!file) return null;
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `proofs/${fileName}`;
+
+      try {
+        const { error } = await supabase.storage
+          .from("orders")
+          .upload(filePath, file);
+
+        if (error) throw error;
+
+        const { data } = supabase.storage
+          .from("orders")
+          .getPublicUrl(filePath);
+
+        return data.publicUrl;
+      } catch (err) {
+        console.error("Upload error:", err);
+        throw new Error("Failed to upload proof image: " + err.message);
+      }
+    }
+
     // Form submission
     document.getElementById("checkout-form").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -206,12 +232,32 @@
         return;
       }
 
+      const paymentMethod = document.querySelector('input[name="payment-method"]:checked').value;
+      let proofImageUrl = null;
+
+      // Handle file upload if using gcash_manual
+      if (paymentMethod === "gcash_manual") {
+        const proofFile = document.getElementById("proof-image").files[0];
+        if (!proofFile) {
+          toast("Please upload payment proof", "error");
+          return;
+        }
+
+        try {
+          toast("Uploading proof image...", "info");
+          proofImageUrl = await uploadProofImage(proofFile);
+        } catch (err) {
+          toast(err.message, "error");
+          return;
+        }
+      }
+
       const customerData = {
         name: document.getElementById("customer-name").value,
         robloxUsername: document.getElementById("roblox-username").value,
-        paymentMethod: document.querySelector('input[name="payment-method"]:checked').value,
+        paymentMethod: paymentMethod,
         gcashRef: document.getElementById("gcash-ref").value || null,
-        proofImageUrl: null // TODO: Handle file upload
+        proofImageUrl: proofImageUrl
       };
 
       try {

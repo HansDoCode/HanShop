@@ -65,6 +65,7 @@
     import "./js/analytics.js";
     import { Order } from "./js/order.js";
     import { toast, formatCurrency } from "./js/utils.js";
+    import html2canvas from "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm";
 
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get("id") || sessionStorage.getItem("lastOrderId");
@@ -112,9 +113,73 @@
       });
 
       document.getElementById("download-receipt-btn").addEventListener("click", async () => {
-        toast("📥 Generating receipt...", "info");
-        // TODO: Implement html2canvas for receipt PNG export
-        setTimeout(() => toast("✓ Receipt downloaded!", "success"), 1000);
+        try {
+          toast("📥 Generating receipt...", "info");
+          
+          // Create a temporary element for receipt
+          const receiptContent = document.createElement("div");
+          receiptContent.className = "bg-gray-900 p-8 rounded-lg";
+          receiptContent.style.width = "600px";
+          receiptContent.style.color = "#f3f4f6";
+          receiptContent.style.fontFamily = "system-ui, -apple-system, sans-serif";
+          
+          receiptContent.innerHTML = `
+            <div style="text-align: center; margin-bottom: 24px;">
+              <h1 style="margin: 0; font-size: 28px; font-weight: bold; margin-bottom: 8px;">🏪 Hans Shop</h1>
+              <p style="margin: 0; color: #9ca3af; font-size: 14px;">Order Receipt</p>
+            </div>
+            
+            <div style="border-top: 1px solid #374151; border-bottom: 1px solid #374151; padding: 16px 0; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #9ca3af;">Order ID:</span>
+                <span style="font-weight: bold;">${orderId}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #9ca3af;">Date:</span>
+                <span>${new Date().toLocaleDateString()}</span>
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+              <h3 style="margin: 0 0 12px 0; font-weight: bold;">Items:</h3>
+              ${order.order_items.map(oi => `
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1f2937; font-size: 14px;">
+                  <span>${oi.products.name} x${oi.qty}</span>
+                  <span>${formatCurrency(oi.line_total)}</span>
+                </div>
+              `).join("")}
+            </div>
+            
+            <div style="border-top: 2px solid #f59e0b; padding-top: 16px; text-align: right;">
+              <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; color: #f59e0b;">
+                <span>Total:</span>
+                <span>${formatCurrency(order.total)}</span>
+              </div>
+            </div>
+          `;
+          
+          // Temporarily add to DOM for html2canvas
+          document.body.appendChild(receiptContent);
+          
+          const canvas = await html2canvas(receiptContent, {
+            backgroundColor: "#111827",
+            scale: 2
+          });
+          
+          // Remove temporary element
+          document.body.removeChild(receiptContent);
+          
+          // Download
+          const link = document.createElement("a");
+          link.href = canvas.toDataURL("image/png");
+          link.download = `receipt-${orderId}.png`;
+          link.click();
+          
+          toast("✓ Receipt downloaded!", "success");
+        } catch (err) {
+          console.error("Download error:", err);
+          toast("Failed to generate receipt: " + err.message, "error");
+        }
       });
     }
 
