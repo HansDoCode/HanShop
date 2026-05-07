@@ -61,7 +61,7 @@
    - [ ] Remove items
    - [ ] Multi-select mode works
    - [ ] Cart total calculates correctly
-
+ # proccessing
 4. **Checkout Flow** (checkout.html)
    - [ ] Form renders correctly
    - [ ] Customer info fields validate
@@ -72,6 +72,8 @@
      - [ ] Public URL generated correctly
    - [ ] Promo code discount applied
    - [ ] Order submitted successfully
+
+   # end here
 
 5. **Order Confirmation** (confirmation.html)
    - [ ] Confirmation page displays with order details

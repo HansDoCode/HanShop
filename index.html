@@ -161,60 +161,95 @@
     // Initialize dark mode
     initDarkMode();
 
-    // Load products from Supabase
+
+    // --- Search/filter state ---
+    let allProducts = [];
+    let searchTerm = "";
+
+    // --- Render products helper ---
+    function renderProducts(products) {
+      const grid = document.getElementById("products-grid");
+      const loading = document.getElementById("loading-skeleton");
+      loading.style.display = "none";
+      if (!products.length) {
+        grid.innerHTML = `<div class='col-span-full text-center text-gray-400'>No products found.</div>`;
+        return;
+      }
+      grid.innerHTML = products.map(p => `
+        <div class="card relative group cursor-pointer hover:shadow-xl hover:shadow-gold transition" data-product-id="${p.id}">
+          <input type="checkbox" class="product-checkbox hidden absolute top-2 left-2 w-4 h-4 z-10">
+          <img src="${p.image_url}" alt="${p.name}" class="w-full h-40 object-cover rounded bg-gray-800">
+          ${p.stock === 0 ? '<div class="absolute inset-0 bg-black/60 rounded flex items-center justify-center"><span class="text-sm font-bold">SOLD OUT</span></div>' : ''}
+          ${p.stock > 0 && p.stock < 3 ? `<span class="badge-warning absolute top-2 right-2">Only ${p.stock} left</span>` : ''}
+          <div class="p-3">
+            <h3 class="font-semibold text-sm truncate">${p.name}</h3>
+            <p class="text-gold font-bold text-lg">₱${(p.rate / 100).toFixed(2)}</p>
+            <div class="flex justify-between items-center text-xs text-gray-400 mt-2">
+              <span>⭐ 4.8 (12 reviews)</span>
+              <span>${p.stock} in stock</span>
+            </div>
+            <button class="w-full mt-3 btn-primary text-xs" onclick="window.location.href='/product.html?id=${p.id}'">View</button>
+          </div>
+        </div>
+      `).join("");
+
+      // Add multi-select listeners
+      let multiSelectMode = false;
+      document.getElementById("multi-select-btn")?.addEventListener("click", () => {
+        multiSelectMode = !multiSelectMode;
+        document.querySelectorAll(".product-checkbox").forEach(cb => {
+          cb.classList.toggle("hidden");
+        });
+        document.getElementById("multi-select-btn").classList.toggle("bg-gold");
+        document.getElementById("multi-select-btn").classList.toggle("text-black");
+        document.getElementById("cart-tray").classList.toggle("hidden");
+        updateCartTray();
+      });
+      document.querySelectorAll(".product-checkbox").forEach(cb => {
+        cb.addEventListener("change", updateCartTray);
+      });
+    }
+
+    // --- Search/filter logic ---
+    function filterProducts() {
+      const term = searchTerm.trim().toLowerCase();
+      if (!term) {
+        renderProducts(allProducts);
+        return;
+      }
+      renderProducts(allProducts.filter(p =>
+        p.name.toLowerCase().includes(term) ||
+        (p.description || "").toLowerCase().includes(term)
+      ));
+    }
+
+    // --- Load products from Supabase ---
     async function loadProducts() {
       const grid = document.getElementById("products-grid");
       const loading = document.getElementById("loading-skeleton");
-      
       try {
         const { data: products, error } = await supabase
           .from("products")
           .select("*")
           .eq("featured", false)
           .order("created_at", { ascending: false });
-
         if (error) throw error;
-
-        loading.style.display = "none";
-        grid.innerHTML = products.map(p => `
-          <div class="card relative group cursor-pointer hover:shadow-xl hover:shadow-gold transition" data-product-id="${p.id}">
-            <input type="checkbox" class="product-checkbox hidden absolute top-2 left-2 w-4 h-4 z-10">
-            <img src="${p.image_url}" alt="${p.name}" class="w-full h-40 object-cover rounded bg-gray-800">
-            ${p.stock === 0 ? '<div class="absolute inset-0 bg-black/60 rounded flex items-center justify-center"><span class="text-sm font-bold">SOLD OUT</span></div>' : ''}
-            ${p.stock > 0 && p.stock < 3 ? `<span class="badge-warning absolute top-2 right-2">Only ${p.stock} left</span>` : ''}
-            <div class="p-3">
-              <h3 class="font-semibold text-sm truncate">${p.name}</h3>
-              <p class="text-gold font-bold text-lg">₱${(p.rate / 100).toFixed(2)}</p>
-              <div class="flex justify-between items-center text-xs text-gray-400 mt-2">
-                <span>⭐ 4.8 (12 reviews)</span>
-                <span>${p.stock} in stock</span>
-              </div>
-              <button class="w-full mt-3 btn-primary text-xs" onclick="window.location.href='/product.html?id=${p.id}'">View</button>
-            </div>
-          </div>
-        `).join("");
-
-        // Add multi-select listeners
-        let multiSelectMode = false;
-        document.getElementById("multi-select-btn")?.addEventListener("click", () => {
-          multiSelectMode = !multiSelectMode;
-          document.querySelectorAll(".product-checkbox").forEach(cb => {
-            cb.classList.toggle("hidden");
-          });
-          document.getElementById("multi-select-btn").classList.toggle("bg-gold");
-          document.getElementById("multi-select-btn").classList.toggle("text-black");
-          document.getElementById("cart-tray").classList.toggle("hidden");
-          updateCartTray();
-        });
-
-        document.querySelectorAll(".product-checkbox").forEach(cb => {
-          cb.addEventListener("change", updateCartTray);
-        });
-
+        allProducts = products;
+        filterProducts();
       } catch (err) {
         grid.innerHTML = `<div class="col-span-full text-center text-red-500">✗ Failed to load products: ${err.message}</div>`;
       }
     }
+
+    // --- Search bar event listeners ---
+    document.getElementById("search-bar")?.addEventListener("input", e => {
+      searchTerm = e.target.value;
+      filterProducts();
+    });
+    document.getElementById("search-bar-mobile")?.addEventListener("input", e => {
+      searchTerm = e.target.value;
+      filterProducts();
+    });
 
     function updateCartTray() {
       const checked = document.querySelectorAll(".product-checkbox:checked").length;
